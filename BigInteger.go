@@ -1,24 +1,33 @@
 // BigInteger
 package BigInteger
 
-import (
-	"fmt"
-)
-
 type BigInteger struct {
-	Value []int32
+	Positive bool
+	Value    []int32
 }
 
 func BigInt(bis string) *BigInteger {
+	positive := true
 	buf := []byte(bis)
 	bLen := len(buf)
+	if bLen <= 0 {
+		return nil
+	}
+	if buf[0] == '-' || buf[0] == '+' {
+		if buf[0] == '-' {
+			positive = false
+		}
+		bLen--
+		buf = buf[1:]
+	}
 	vLen := bLen / 4
 	hLen := bLen % 4
 	if hLen > 0 {
 		vLen++
 	}
 	bi := &BigInteger{
-		Value: make([]int32, vLen),
+		Positive: positive,
+		Value:    make([]int32, vLen),
 	}
 	var tValue int32 = 0
 	vLen--
@@ -46,19 +55,4 @@ func BigInt(bis string) *BigInteger {
 		}
 	}
 	return bi
-}
-
-func (bi *BigInteger) ToString() string {
-	if bi == nil {
-		return "this big int is illegal!"
-	}
-	bLen := len(bi.Value)
-	str := ""
-	if bLen > 0 {
-		str += fmt.Sprintf("%d", bi.Value[bLen-1])
-	}
-	for i := bLen - 2; i >= 0; i-- {
-		str += fmt.Sprintf("%04d", bi.Value[i])
-	}
-	return str
 }

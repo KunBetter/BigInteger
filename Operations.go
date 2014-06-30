@@ -5,12 +5,23 @@ func (bi *BigInteger) Add(other *BigInteger) *BigInteger {
 	if bi == nil || other == nil {
 		return nil
 	}
+	positive := true
+	if bi.Positive != other.Positive {
+		if bi.Positive {
+			return bi.Sub(other.Abs())
+		} else {
+			return other.Sub(bi.Abs())
+		}
+	} else {
+		positive = bi.Positive
+	}
 	bLen := len(bi.Value)
 	oLen := len(other.Value)
 	minLen := min(bLen, oLen)
 	maxLen := max(bLen, oLen)
 	nbi := &BigInteger{
-		Value: make([]int32, maxLen),
+		Positive: positive,
+		Value:    make([]int32, maxLen),
 	}
 	var Carry int32 = 0 //进位
 	for i := 0; i < minLen; i++ {
@@ -38,6 +49,10 @@ func (bi *BigInteger) Multi(other *BigInteger) *BigInteger {
 	if bi == nil || other == nil {
 		return nil
 	}
+	positive := true
+	if bi.Positive != other.Positive {
+		positive = false
+	}
 	bLen := len(bi.Value)
 	oLen := len(other.Value)
 	bufVLen := bLen + oLen - 1
@@ -48,7 +63,8 @@ func (bi *BigInteger) Multi(other *BigInteger) *BigInteger {
 		}
 	}
 	nbi := &BigInteger{
-		Value: make([]int32, bufVLen),
+		Positive: positive,
+		Value:    make([]int32, bufVLen),
 	}
 	var Carry int32 = 0 //进位
 	for i := 0; i < bufVLen; i++ {
@@ -66,14 +82,45 @@ func (bi *BigInteger) Sub(other *BigInteger) *BigInteger {
 	if bi == nil || other == nil {
 		return nil
 	}
+	if bi.Positive != other.Positive {
+		if bi.Positive {
+			return bi.Add(other.Abs())
+		} else {
+			nSub := other.Add(bi.Abs())
+			nSub.Positive = false
+			return nSub
+		}
+	}
+	ba := bi.Abs()
+	oa := other.Abs()
+	if ba.GreaterAbs(oa) {
+		tSub := ba.subAbs(oa)
+		if !bi.Positive {
+			tSub.Positive = false
+		}
+		return tSub
+	} else {
+		tSub := oa.subAbs(ba)
+		if bi.Positive {
+			tSub.Positive = false
+		}
+		return tSub
+	}
+}
+
+func (bi *BigInteger) subAbs(other *BigInteger) *BigInteger {
+	if bi == nil || other == nil {
+		return nil
+	}
 	bLen := len(bi.Value)
 	oLen := len(other.Value)
-	minLen := min(bLen, oLen)
+	maxLen := max(bLen, oLen)
 	nbi := &BigInteger{
-		Value: make([]int32, minLen),
+		Positive: true,
+		Value:    make([]int32, maxLen),
 	}
 	var Carry int32 = 0 //借位
-	for i := 0; i < minLen; i++ {
+	for i := 0; i < maxLen; i++ {
 		tV := bi.Value[i] - other.Value[i] - Carry
 		if tV < 0 {
 			Carry = 1
@@ -95,6 +142,9 @@ func (bi *BigInteger) Div(other *BigInteger) *BigInteger {
 }
 
 func (bi *BigInteger) Equal(other *BigInteger) bool {
+	if bi.Positive != other.Positive {
+		return false
+	}
 	bLen := len(bi.Value)
 	oLen := len(other.Value)
 	if bLen != oLen {

@@ -7,8 +7,8 @@ import (
 )
 
 func main() {
-	a := "9952345657567657"
-	b := "9934534534532234"
+	a := "-91119932345657567657"
+	b := "-91119954534534532234"
 	bigA := BigInteger.BigInt(a)
 	bigB := BigInteger.BigInt(b)
 	//print
