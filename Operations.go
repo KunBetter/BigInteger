@@ -61,3 +61,50 @@ func (bi *BigInteger) Multi(other *BigInteger) *BigInteger {
 	}
 	return nbi
 }
+
+func (bi *BigInteger) Sub(other *BigInteger) *BigInteger {
+	if bi == nil || other == nil {
+		return nil
+	}
+	bLen := len(bi.Value)
+	oLen := len(other.Value)
+	minLen := min(bLen, oLen)
+	nbi := &BigInteger{
+		Value: make([]int32, minLen),
+	}
+	var Carry int32 = 0 //借位
+	for i := 0; i < minLen; i++ {
+		tV := bi.Value[i] - other.Value[i] - Carry
+		if tV < 0 {
+			Carry = 1
+			nbi.Value[i] = tV + HEX
+
+		} else {
+			nbi.Value[i] = tV
+			Carry = 0
+		}
+	}
+	return nbi
+}
+
+func (bi *BigInteger) Div(other *BigInteger) *BigInteger {
+	if bi == nil || other == nil {
+		return nil
+	}
+	return nil
+}
+
+func (bi *BigInteger) Equal(other *BigInteger) bool {
+	bLen := len(bi.Value)
+	oLen := len(other.Value)
+	if bLen != oLen {
+		return false
+	} else {
+		for i := bLen - 1; i >= 0; i-- {
+			if bi.Value[i] != other.Value[i] {
+				return false
+			}
+		}
+	}
+	return true
+}
