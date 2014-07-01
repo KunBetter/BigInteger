@@ -15,8 +15,8 @@ func (bi *BigInteger) Add(other *BigInteger) *BigInteger {
 	} else {
 		positive = bi.Positive
 	}
-	bLen := len(bi.Value)
-	oLen := len(other.Value)
+	bLen := int32(len(bi.Value))
+	oLen := int32(len(other.Value))
 	minLen := min(bLen, oLen)
 	maxLen := max(bLen, oLen)
 	nbi := &BigInteger{
@@ -24,23 +24,84 @@ func (bi *BigInteger) Add(other *BigInteger) *BigInteger {
 		Value:    make([]int32, maxLen),
 	}
 	var Carry int32 = 0 //进位
-	for i := 0; i < minLen; i++ {
+	var i int32 = 0
+	for i = 0; i < minLen; i++ {
 		tV := bi.Value[i] + other.Value[i] + Carry
 		nbi.Value[i] = tV % HEX
 		Carry = tV / HEX
 	}
-	for i := minLen; i < bLen; i++ {
+	for i = minLen; i < bLen; i++ {
 		tV := bi.Value[i] + Carry
 		nbi.Value[i] = tV % HEX
 		Carry = tV / HEX
 	}
-	for i := minLen; i < oLen; i++ {
+	for i = minLen; i < oLen; i++ {
 		tV := other.Value[i] + Carry
 		nbi.Value[i] = tV % HEX
 		Carry = tV / HEX
 	}
 	if Carry > 0 {
 		nbi.Value = append(nbi.Value, Carry)
+	}
+	return nbi
+}
+
+func (bi *BigInteger) Sub(other *BigInteger) *BigInteger {
+	if bi == nil || other == nil {
+		return nil
+	}
+	if bi.Positive != other.Positive {
+		if bi.Positive {
+			return bi.Add(other.Abs())
+		} else {
+			nSub := other.Add(bi.Abs())
+			nSub.Positive = false
+			return nSub
+		}
+	}
+	ba := bi.Abs()
+	oa := other.Abs()
+	if ba.GreaterAbs(oa) {
+		tSub := ba.SubAbs(oa)
+		if !bi.Positive {
+			tSub.Positive = false
+		}
+		return tSub
+	} else {
+		tSub := oa.SubAbs(ba)
+		if bi.Positive {
+			tSub.Positive = false
+		}
+		return tSub
+	}
+}
+
+func (bi *BigInteger) SubAbs(other *BigInteger) *BigInteger {
+	if bi == nil || other == nil {
+		return nil
+	}
+	bLen := int32(len(bi.Value))
+	oLen := int32(len(other.Value))
+	maxLen := max(bLen, oLen)
+	nbi := &BigInteger{
+		Positive: true,
+		Value:    make([]int32, maxLen),
+	}
+	var i int32 = 0
+	for i = 0; i < bLen-oLen; i++ {
+		other.Value = append(other.Value, 0)
+	}
+	var Carry int32 = 0 //借位
+	for i = 0; i < maxLen; i++ {
+		tV := bi.Value[i] - other.Value[i] - Carry
+		if tV < 0 {
+			Carry = 1
+			nbi.Value[i] = tV + HEX
+
+		} else {
+			nbi.Value[i] = tV
+			Carry = 0
+		}
 	}
 	return nbi
 }
@@ -78,83 +139,73 @@ func (bi *BigInteger) Multi(other *BigInteger) *BigInteger {
 	return nbi
 }
 
-func (bi *BigInteger) Sub(other *BigInteger) *BigInteger {
-	if bi == nil || other == nil {
-		return nil
-	}
-	if bi.Positive != other.Positive {
-		if bi.Positive {
-			return bi.Add(other.Abs())
-		} else {
-			nSub := other.Add(bi.Abs())
-			nSub.Positive = false
-			return nSub
-		}
-	}
-	ba := bi.Abs()
-	oa := other.Abs()
-	if ba.GreaterAbs(oa) {
-		tSub := ba.subAbs(oa)
-		if !bi.Positive {
-			tSub.Positive = false
-		}
-		return tSub
-	} else {
-		tSub := oa.subAbs(ba)
-		if bi.Positive {
-			tSub.Positive = false
-		}
-		return tSub
-	}
-}
-
-func (bi *BigInteger) subAbs(other *BigInteger) *BigInteger {
-	if bi == nil || other == nil {
+func (bi *BigInteger) MultiNum(num int32) *BigInteger {
+	if bi == nil {
 		return nil
 	}
 	bLen := len(bi.Value)
-	oLen := len(other.Value)
-	maxLen := max(bLen, oLen)
-	nbi := &BigInteger{
-		Positive: true,
-		Value:    make([]int32, maxLen),
+	bufV := make([]int32, bLen)
+	for i := 0; i < bLen; i++ {
+		bufV[i] += num * bi.Value[i]
 	}
-	var Carry int32 = 0 //借位
-	for i := 0; i < maxLen; i++ {
-		tV := bi.Value[i] - other.Value[i] - Carry
-		if tV < 0 {
-			Carry = 1
-			nbi.Value[i] = tV + HEX
-
-		} else {
-			nbi.Value[i] = tV
-			Carry = 0
-		}
+	nbi := &BigInteger{
+		Positive: bi.Positive,
+		Value:    make([]int32, bLen),
+	}
+	var Carry int32 = 0 //进位
+	for i := 0; i < bLen; i++ {
+		tV := bufV[i] + Carry
+		nbi.Value[i] = tV % HEX
+		Carry = tV / HEX
+	}
+	if Carry > 0 {
+		nbi.Value = append(nbi.Value, Carry)
 	}
 	return nbi
 }
 
-func (bi *BigInteger) Div(other *BigInteger) *BigInteger {
+func (bi *BigInteger) Div(other *BigInteger) (q, r *BigInteger) {
 	if bi == nil || other == nil {
-		return nil
+		return nil, nil
 	}
-	return nil
-}
-
-func (bi *BigInteger) Equal(other *BigInteger) bool {
-	if bi.Positive != other.Positive {
-		return false
+	Q := []int32{}
+	uLen := len(bi.Value)
+	vLen := len(other.Value)
+	U := make([]int32, uLen)
+	for i := 0; i < uLen; i++ {
+		U[i] = bi.Value[uLen-1-i]
 	}
-	bLen := len(bi.Value)
-	oLen := len(other.Value)
-	if bLen != oLen {
-		return false
-	} else {
-		for i := bLen - 1; i >= 0; i-- {
-			if bi.Value[i] != other.Value[i] {
-				return false
+	V := make([]int32, vLen)
+	for i := 0; i < vLen; i++ {
+		V[i] = other.Value[vLen-1-i]
+	}
+	v := other
+	for j := 0; j < uLen-vLen; j++ {
+		x := (U[j]*HEX + U[j+1]) / V[0]
+		y := x * V[1] / (V[0]*HEX + V[1])
+		q := x - y
+		p := v.MultiNum(q)
+		Uj := BigIntSlice(U[j : j+vLen+1])
+		if !p.LessEqualAbs(Uj) {
+			p = p.Sub(v)
+			if p.LessEqualAbs(Uj) {
+				q--
+			} else {
+				p = p.Sub(v)
+				q -= 2
 			}
 		}
+		Ur := Uj.Sub(p)
+		Q = append(Q, q)
+		copy(U[j:], Ur.ToSlice())
 	}
-	return true
+	positive := true
+	if bi.Positive != other.Positive {
+		positive = false
+	}
+	q = BigIntSlice(Q)
+	q.Positive = positive
+	r = BigIntSlice(U)
+	r.Positive = bi.Positive
+	return
 }
